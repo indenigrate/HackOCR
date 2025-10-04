@@ -1,22 +1,24 @@
 # app/api/schemas/ocr.py
-from pydantic import BaseModel
-from typing import List, Dict, Any
 
-# Pydantic model for the data extracted from a document
+from pydantic import BaseModel
+from typing import List
+
 class ExtractionResponse(BaseModel):
+    """Defines the structure of the data extracted from a document."""
     name: str | None = None
-    age: int | None = None
+    age: str | None = None
     gender: str | None = None
     address: str | None = None
     email_id: str | None = None
     phone_number: str | None = None
+    raw_text: str # Include the full raw text for debugging
 
-# Pydantic model for a single field's verification result
 class VerificationFieldResult(BaseModel):
+    """Represents the verification result for a single field."""
     field: str
-    status: str # "match", "mismatch", or "missing"
+    status: str # "match", "mismatch", or "missing_in_document"
     confidence: float
 
-# Pydantic model for the final verification response
 class VerificationResponse(BaseModel):
+    """The final response for the verification endpoint."""
     results: List[VerificationFieldResult]

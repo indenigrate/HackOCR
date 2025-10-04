@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+
+# For OCR, Model Handling, and Image Processing
+torch
+transformers
+sentencepiece
+Pillow
+opencv-python-headless
+
+# For PDF file support
+PyMuPDF
+pymupdf
+
+# For string comparison in verification
+python-Levenshtein
