@@ -8,6 +8,7 @@ transformers
 sentencepiece
 Pillow
 opencv-python-headless
+pytesseract
 
 # For PDF file support
 PyMuPDF
