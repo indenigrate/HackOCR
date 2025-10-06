@@ -8,7 +8,10 @@ transformers
 sentencepiece
 Pillow
 opencv-python-headless
-pytesseract
+ollama
+
+paddlepaddle
+paddleocr
 
 # For PDF file support
 PyMuPDF

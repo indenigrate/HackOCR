@@ -1,51 +1,103 @@
-# app/api/endpoints/ocr.py
+# app/api/v1/endpoints/ocr.py
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from app.services.ocr_service import ocr_service
+from app.services.llm_service import llm_service
+from app.api.schemas.ocr import ExtractionResponse, VerificationResponse, VerificationFieldResult
+import tempfile
+import os
 import json
-
-from app.services import ocr_service
-from app.api.schemas.ocr import ExtractionResponse, VerificationResponse
+from Levenshtein import ratio
 
 router = APIRouter()
 
-@router.post(
-    "/extract",
-    response_model=ExtractionResponse,
-    summary="Extracts structured data from a document",
-)
-async def ocr_extraction_api(
-    file: UploadFile = File(..., description="The scanned document (PDF, JPG, PNG) to process.")
-):
+@router.post("/extract", response_model=ExtractionResponse)
+async def ocr_extraction_api(file: UploadFile = File(...)):
     """
-    Accepts a scanned document and performs the following steps:
-    1.  Converts the document to an image.
-    2.  Uses the TrOCR model to extract text.
-    3.  Parses the raw text to find structured fields (Name, Age, etc.).
-    4.  Returns the structured data as a JSON object.
+    API 1: Accepts an image/PDF, extracts text, and returns structured data.
+    [cite: 39, 40]
     """
-    return await ocr_service.process_and_extract_data(file)
-
-
-@router.post(
-    "/verify",
-    response_model=VerificationResponse,
-    summary="Verifies form data against a document",
-)
-async def data_verification_api(
-    file: UploadFile = File(..., description="The original scanned document for verification."),
-    form_data_json: str = Form(..., description="A JSON string of the form data to be verified (e.g., '{\"name\": \"John Doe\"}').")
-):
-    """
-    Accepts user-submitted form data and the original document, then:
-    1.  Extracts structured data from the document using the OCR service.
-    2.  Compares each field from the user's data with the extracted data.
-    3.  Returns a detailed verification result with a match status and confidence score for each field.
-    """
-    try:
-        form_data = json.loads(form_data_json)
-        if not isinstance(form_data, dict):
-             raise HTTPException(status_code=400, detail="form_data_json must be a JSON object.")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON format in form_data_json.")
+    # Save the uploaded file to a temporary path
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+        temp.write(await file.read())
+        temp_file_path = temp.name
     
-    return await ocr_service.verify_document_data(file, form_data)
+    try:
+        # Perform OCR and parsing
+        raw_text = ocr_service.extract_text_from_image(temp_file_path)
+        if not raw_text:
+            raise HTTPException(status_code=422, detail="No text could be extracted from the image.")
+            
+        parsed_data = ocr_service.parse_raw_text(raw_text)
+        
+        return ExtractionResponse(**parsed_data, raw_text=raw_text)
+    finally:
+        # Clean up the temporary file
+        os.unlink(temp_file_path)
+
+@router.post("/extract-llm", response_model=ExtractionResponse)
+async def ocr_extraction_llm_api(file: UploadFile = File(...)):
+    """
+    NEW API: Accepts an image, extracts text, and uses an LLM to return structured data.
+    """
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+        temp.write(await file.read())
+        temp_file_path = temp.name
+    
+    try:
+        # Step 1: Get the raw text using the existing OCR service
+        raw_text = ocr_service.extract_text_from_image(temp_file_path)
+        if not raw_text:
+            raise HTTPException(status_code=422, detail="No text could be extracted from the image.")
+        
+        # Step 2: Pass the raw text to the new LLM service for parsing
+        parsed_data = llm_service.parse_with_llm(raw_text)
+        
+        return ExtractionResponse(**parsed_data, raw_text=raw_text)
+    finally:
+        os.unlink(temp_file_path)
+
+@router.post("/verify", response_model=VerificationResponse)
+async def data_verification_api(file: UploadFile = File(...), form_data: str = Form(...)):
+    """
+    API 2: Accepts an image and form data, then verifies them against each other.
+    [cite: 45, 46]
+    """
+    # Save the uploaded file to a temporary path
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
+        temp.write(await file.read())
+        temp_file_path = temp.name
+
+    try:
+        # Perform OCR and parsing on the document
+        raw_text = ocr_service.extract_text_from_image(temp_file_path)
+        if not raw_text:
+            raise HTTPException(status_code=422, detail="No text could be extracted to perform verification.")
+        
+        extracted_data = ocr_service.parse_raw_text(raw_text)
+        
+        # Parse the user-submitted form data (sent as a JSON string)
+        submitted_data = json.loads(form_data)
+        
+        # Compare extracted data with submitted data
+        results = []
+        for field, submitted_value in submitted_data.items():
+            extracted_value = extracted_data.get(field)
+            
+            status = "missing_in_document"
+            confidence = 0.0
+            
+            if extracted_value is not None:
+                # Use Levenshtein ratio for string similarity
+                similarity = ratio(str(submitted_value).lower(), str(extracted_value).lower())
+                if similarity >= 0.95: # Consider it a match if 95% similar
+                    status = "match"
+                else:
+                    status = "mismatch"
+                confidence = similarity
+
+            results.append(VerificationFieldResult(field=field, status=status, confidence=confidence))
+        
+        return VerificationResponse(results=results)
+    finally:
+        os.unlink(temp_file_path)

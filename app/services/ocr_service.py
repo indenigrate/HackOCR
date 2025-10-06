@@ -1,59 +1,70 @@
-# A more robust version of the parser
+# app/services/ocr_service.py
 
-def parse_raw_text(text: str) -> dict:
-    """A smarter parser that handles multi-line and imperfect OCR output."""
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    data = {}
-    
-    keywords = {
-        'name': ['name', 'first name', 'first mame'],
-        'last_name': ['last name'],
-        'age': ['age', 'aget'],
-        'gender': ['gender', 'grender'],
-        'address': ['address', 'adebress linet'],
-        'country': ['country'],
-        'phone_number': ['phone number', 'phone', 'phonemumber'],
-        'email_id': ['email id', 'email'],
-    }
+from paddleocr import PaddleOCR
+import re
+from Levenshtein import ratio
+import cv2
+import os
+import tempfile
 
-    # Pass 1: Find lines with a ':' separator
-    remaining_lines = []
-    for line in lines:
-        found_on_line = False
-        if ':' in line:
-            parts = [p.strip() for p in line.split(':', 1)]
-            if len(parts) == 2:
-                key, value = parts
-                for field, keys in keywords.items():
-                    # Check if the field hasn't been parsed yet to avoid overwrites
-                    if field not in data and any(k in key.lower() for k in keys):
-                        data[field] = value
-                        found_on_line = True
-                        break
-        if not found_on_line:
-            remaining_lines.append(line)
+class OCRService:
+    """A service class to handle all OCR-related logic."""
 
-    # Pass 2: Find keywords where the value is on the next line
-    i = 0
-    while i < len(remaining_lines):
-        line_lower = remaining_lines[i].lower()
-        if i + 1 < len(remaining_lines):
-            for field, keys in keywords.items():
-                # Check if the field hasn't been parsed yet
-                if field not in data and any(k in line_lower for k in keys):
-                    data[field] = remaining_lines[i+1]
-                    i += 1 # Skip the next line as it's been consumed
-                    break
-        i += 1
-    
-    # Consolidate and Clean Up Data
-    if data.get('address') and data.get('country'):
-        data['address'] = f"{data.get('address')}, {data.get('country')}"
+    def __init__(self):
+        """Initializes and loads the OCR model once."""
+        print("Loading PaddleOCR model...")
+        self.model = PaddleOCR(
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=True,
+            lang='en'
+        )
+        print("✅ PaddleOCR model loaded successfully.")
 
-    if data.get('name') and data.get('last_name'):
-        data['name'] = f"{data['name']} {data['last_name']}"
+    def extract_text_from_image(self, image_path: str) -> str:
+        """
+        Performs OCR and extracts text based on the new, correct result structure.
+        """
+        result = self.model.predict(image_path)
+        
+        # --- THIS IS THE KEY CHANGE ---
+        # The result is a list containing one dictionary for the image.
+        # We access that dictionary and get the text from the 'rec_texts' key.
+        if not result or not result[0]:
+            return ""
+        
+        result_dict = result[0]
+        texts = result_dict.get('rec_texts', []) # Safely get the list of texts
+        
+        return "\n".join(texts)
 
-    if data.get('email_id'):
-        data['email_id'] = re.sub(r'\s+', '', data['email_id']).replace('cem', 'com').replace('aail', 'gmail')
+    def parse_raw_text(self, text: str) -> dict:
+        """Intelligently parses raw text to extract structured key-value pairs."""
+        data = {}
+        # This regex is good for lines like "Key : Value"
+        pattern = re.compile(
+            r"^(.*?)\s*:\s*(.*)", re.IGNORECASE | re.MULTILINE
+        )
+        matches = pattern.findall(text)
+        
+        # A map to normalize extracted keys to our desired schema keys
+        key_map = {
+            'first name': 'first_name', 'midde name': 'middle_name', 'last name': 'last_name',
+            'grender': 'gender', 'gender': 'gender', 'date of birth': 'date_of_birth',
+            'address linet': 'address_line_1', 'address line1': 'address_line_1',
+            'address line 2': 'address_line_2', 'city': 'city', 'state': 'state',
+            'pin code': 'pin_code', 'phone member': 'phone_number', 'phone number': 'phone_number',
+            'email id': 'email_id', 'email': 'email_id', 'name': 'first_name', 'age': 'date_of_birth',
+            'address': 'address_line_1', 'country': 'state'
+        }
+        
+        for key, value in matches:
+            clean_key = key.strip().lower()
+            if clean_key in key_map:
+                # Assign if not already filled to avoid overwriting (e.g., "Name" vs "First name")
+                if key_map[clean_key] not in data:
+                    data[key_map[clean_key]] = value.strip()
+        
+        return data
 
-    return data
+# Create a single instance of the service to be used by the API
+ocr_service = OCRService()
