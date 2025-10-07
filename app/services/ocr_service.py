@@ -86,21 +86,6 @@ class OCRService:
         
         return date_str
 
-    def _clean_address(self, address: str) -> str:
-        """Clean up address text by fixing common OCR errors."""
-        # Fix common OCR errors in addresses
-        corrections = {
-            'Linet': 'Line',
-            'Layeut': 'Layout',
-            'Strect': 'Street',
-            'Read': 'Road'
-        }
-        
-        for wrong, correct in corrections.items():
-            address = re.sub(wrong, correct, address, flags=re.IGNORECASE)
-        
-        return address.strip()
-
     def parse_raw_text(self, text: str) -> dict:
         """Intelligently parses raw text to extract structured key-value pairs."""
         data = {}
@@ -132,38 +117,16 @@ class OCRService:
             'address': 'address_line_1', 'country': 'state'
         }
         
-        # Define key mappings with better handling of OCR errors
-        key_map = {
-            'first name': 'first_name', 'midde name': 'middle_name', 'last name': 'last_name',
-            'grender': 'gender', 'gender': 'gender', 'date of birth': 'date_of_birth',
-            'address linet': 'address_line_1', 'address line1': 'address_line_1', 'address line 1': 'address_line_1',
-            'adebress linet': 'address_line_1', 'adress line1': 'address_line_1',
-            'address line2': 'address_line_2', 'address line 2': 'address_line_2', 'address line 2:': 'address_line_2',
-            'city': 'city', 'state': 'state',
-            'pin code': 'pin_code', 'pin c0de': 'pin_code',
-            'phone member': 'phone_number', 'phone number': 'phone_number', 'phonemumber': 'phone_number',
-            'email id': 'email_id', 'email': 'email_id'
-        }
-        
         # Process all key-value pairs
         for key, value in matches:
             clean_key = key.strip().lower()
             if clean_key in key_map:
                 mapped_key = key_map[clean_key]
-                clean_value = value.strip()
-                
-                # Special handling for dates
+                # Special handling for date of birth
                 if mapped_key == 'date_of_birth':
-                    clean_value = self._normalize_date(clean_value)
-                
-                # Special handling for addresses
-                if mapped_key in ['address_line_1', 'address_line_2']:
-                    clean_value = self._clean_address(clean_value)
-                
-                # Don't overwrite existing values unless it's address line 2
-                # This ensures proper ordering of address lines
-                if mapped_key not in data or mapped_key == 'address_line_2':
-                    data[mapped_key] = clean_value
+                    value = self._normalize_date(value)
+                if mapped_key not in data:  # Don't overwrite existing values
+                    data[mapped_key] = value.strip()
         
         # A map to normalize extracted keys to our desired schema keys
         key_map = {

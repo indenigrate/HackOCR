@@ -89,9 +89,10 @@ async def data_verification_api(file: UploadFile = File(...), form_data: str = F
         for field, submitted_value in submitted_data.items():
             # Get the extracted value for this field, ensure it's a string
             extracted_value = str(extracted_data.get(field, "") or "")
+            submitted_value = str(submitted_value or "")
             
             # Calculate similarity ratio
-            similarity = ratio(str(submitted_value).lower(), str(extracted_value).lower())
+            similarity = ratio(submitted_value.lower(), extracted_value.lower())
             
             # Determine if it's a match (you can adjust the threshold)
             is_match = similarity >= 0.8

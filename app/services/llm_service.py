@@ -22,37 +22,18 @@ You are an expert data extraction tool. Your task is to analyze the raw text fro
 **Instructions:**
 1.  Extract the following fields: `first_name`, `last_name`, `middle_name`, `gender`, `date_of_birth`, `address_line_1`, `address_line_2`, `city`, `state`, `pin_code`, `phone_number`, `email_id`.
 2.  If a field is not found in the text, use `null` as its value in the JSON.
-3.  For addresses:
-    - `address_line_1` should be a simple string with the street address (e.g., "Road#1, Street #2")
-    - `address_line_2` should be a simple string with the layout/area name (e.g., "HSR Layout")
-    - Do not use nested objects for addresses
-    - Keep street numbers and building info in address_line_1
-    - Keep layout/area names in address_line_2
-    - Example output format:
-      "address_line_1": "Road#1, Street #2",
-      "address_line_2": "HSR Layout"
-
-4.  For dates: Convert all dates to YYYY-MM-DD format:
+3.  For dates: Convert all dates to YYYY-MM-DD format:
     - Convert dates like "DD-MM-YYYY" or "DD/MM/YYYY" to "YYYY-MM-DD"
     - Handle various date formats and standardize them
     - Ensure proper zero-padding for single digit days/months
-
-5.  For emails: Always extract email addresses even if there are OCR errors. Fix common substitutions:
+4.  For emails: Always extract email addresses even if there are OCR errors. Fix common substitutions:
     - Replace "aail" with "gmail"
     - Keep the local part and domain intact
     - Ensure @ symbol is preserved
     - Remove any spaces in email addresses
-
-6.  Use context from the raw text to predict the fields not mentioned and ignore typing errors in common fields.
-
-7.  **Correct obvious OCR errors.** For example:
-    - "mame" should be "name"
-    - "Grender" should be "Gender"
-    - "Layeut" should be "Layout"
-    - "Linet" should be "Line"
-    - Use context to fix garbled words
-
-8.  Your response **MUST** be a single, valid JSON object and nothing else. Do not include any explanations or markdown.
+5.  Use context from the raw text to predict the fields not mentioned and ignore typing errors in common fields.
+6.  **Correct obvious OCR errors.** For example, "mame" should be "name", "Grender" should be "Gender", "Layeut" should be "Layout". Use context to fix garbled words.
+7.  Your response **MUST** be a single, valid JSON object and nothing else. Do not include any explanations or markdown.
 
 **Raw OCR Text:**
 ---
@@ -62,25 +43,6 @@ You are an expert data extraction tool. Your task is to analyze the raw text fro
 **JSON Output:**
 """
         return prompt
-
-    def _normalize_response(self, data: dict) -> dict:
-        """Normalize the response to ensure all fields are in the expected format."""
-        normalized = {}
-        
-        for key, value in data.items():
-            # Handle nested address objects
-            if key in ['address_line_1', 'address_line_2'] and isinstance(value, dict):
-                if 'street_address' in value:
-                    normalized[key] = value['street_address']
-                elif 'layout/area' in value:
-                    normalized[key] = value['layout/area']
-                else:
-                    # If we can't find the expected keys, join all values
-                    normalized[key] = ', '.join(str(v) for v in value.values())
-            else:
-                normalized[key] = value
-        
-        return normalized
 
     def parse_with_llm(self, raw_text: str) -> dict:
         """
@@ -102,10 +64,8 @@ You are an expert data extraction tool. Your task is to analyze the raw text fro
             
             # Parse the JSON string into a Python dictionary.
             parsed_data = json.loads(json_string)
-            # Normalize the response
-            normalized_data = self._normalize_response(parsed_data)
             print("✅ LLM parsing successful.")
-            return normalized_data
+            return parsed_data
 
         except Exception as e:
             print(f"❌ Error during LLM parsing: {e}")
