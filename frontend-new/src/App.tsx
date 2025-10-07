@@ -60,6 +60,32 @@ function App() {
     }
   }
 
+  const normalizeDate = (dateStr: string | null): string => {
+    if (!dateStr) return ''
+    
+    // Try to parse various date formats
+    const patterns = [
+      // DD-MM-YYYY
+      /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/,
+      // YYYY-MM-DD
+      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/
+    ]
+    
+    for (const pattern of patterns) {
+      const match = dateStr.match(pattern)
+      if (match) {
+        const [_, part1, part2, part3] = match
+        // If the first part is a 4-digit year, it's already in YYYY-MM-DD format
+        if (part1.length === 4) {
+          return `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`
+        }
+        // Otherwise, convert from DD-MM-YYYY to YYYY-MM-DD
+        return `${part3}-${part2.padStart(2, '0')}-${part1.padStart(2, '0')}`
+      }
+    }
+    return dateStr
+  }
+
   const handleAutofill = async () => {
     if (!file) {
       alert('Please upload a file first')
@@ -81,7 +107,12 @@ function App() {
       }
 
       const data: OCRResponse = await response.json()
-      setFormData(sanitizeFormData(data))
+      // Normalize the date before setting form data
+      const normalizedData = {
+        ...data,
+        date_of_birth: normalizeDate(data.date_of_birth)
+      }
+      setFormData(sanitizeFormData(normalizedData))
       if (data.annotated_image) {
         setAnnotatedImage(data.annotated_image)
       }

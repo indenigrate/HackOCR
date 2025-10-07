@@ -53,6 +53,29 @@ class OCRService:
         
         return "\n".join(texts), base64_image
 
+    def _normalize_date(self, date_str: str) -> str:
+        """Convert various date formats to YYYY-MM-DD."""
+        # Remove any extra spaces
+        date_str = date_str.strip()
+        
+        # Try different date patterns
+        patterns = [
+            # DD-MM-YYYY
+            (r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})', lambda m: f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"),
+            # YYYY-MM-DD
+            (r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', lambda m: f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}"),
+        ]
+        
+        for pattern, formatter in patterns:
+            match = re.match(pattern, date_str)
+            if match:
+                try:
+                    return formatter(match)
+                except:
+                    continue
+        
+        return date_str
+
     def parse_raw_text(self, text: str) -> dict:
         """Intelligently parses raw text to extract structured key-value pairs."""
         data = {}
@@ -72,6 +95,28 @@ class OCRService:
             # Common OCR fixes for emails
             email = email.replace('aail.', 'gmail.')
             data['email_id'] = email
+        
+        # Map to normalize extracted keys to our desired schema keys
+        key_map = {
+            'first name': 'first_name', 'midde name': 'middle_name', 'last name': 'last_name',
+            'grender': 'gender', 'gender': 'gender', 'date of birth': 'date_of_birth',
+            'address linet': 'address_line_1', 'address line1': 'address_line_1',
+            'address line 2': 'address_line_2', 'city': 'city', 'state': 'state',
+            'pin code': 'pin_code', 'phone member': 'phone_number', 'phone number': 'phone_number',
+            'email id': 'email_id', 'email': 'email_id', 'name': 'first_name', 'age': 'date_of_birth',
+            'address': 'address_line_1', 'country': 'state'
+        }
+        
+        # Process all key-value pairs
+        for key, value in matches:
+            clean_key = key.strip().lower()
+            if clean_key in key_map:
+                mapped_key = key_map[clean_key]
+                # Special handling for date of birth
+                if mapped_key == 'date_of_birth':
+                    value = self._normalize_date(value)
+                if mapped_key not in data:  # Don't overwrite existing values
+                    data[mapped_key] = value.strip()
         
         # A map to normalize extracted keys to our desired schema keys
         key_map = {

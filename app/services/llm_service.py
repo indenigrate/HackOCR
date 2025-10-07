@@ -22,14 +22,18 @@ You are an expert data extraction tool. Your task is to analyze the raw text fro
 **Instructions:**
 1.  Extract the following fields: `first_name`, `last_name`, `middle_name`, `gender`, `date_of_birth`, `address_line_1`, `address_line_2`, `city`, `state`, `pin_code`, `phone_number`, `email_id`.
 2.  If a field is not found in the text, use `null` as its value in the JSON.
-3.  For emails: Always extract email addresses even if there are OCR errors. Fix common substitutions:
+3.  For dates: Convert all dates to YYYY-MM-DD format:
+    - Convert dates like "DD-MM-YYYY" or "DD/MM/YYYY" to "YYYY-MM-DD"
+    - Handle various date formats and standardize them
+    - Ensure proper zero-padding for single digit days/months
+4.  For emails: Always extract email addresses even if there are OCR errors. Fix common substitutions:
     - Replace "aail" with "gmail"
     - Keep the local part and domain intact
     - Ensure @ symbol is preserved
     - Remove any spaces in email addresses
-4.  Use context from the raw text to predict the fields not mentioned and ignore typing errors in common fields.
-5.  **Correct obvious OCR errors.** For example, "mame" should be "name", "Grender" should be "Gender", "Layeut" should be "Layout". Use context to fix garbled words.
-6.  Your response **MUST** be a single, valid JSON object and nothing else. Do not include any explanations or markdown.
+5.  Use context from the raw text to predict the fields not mentioned and ignore typing errors in common fields.
+6.  **Correct obvious OCR errors.** For example, "mame" should be "name", "Grender" should be "Gender", "Layeut" should be "Layout". Use context to fix garbled words.
+7.  Your response **MUST** be a single, valid JSON object and nothing else. Do not include any explanations or markdown.
 
 **Raw OCR Text:**
 ---
