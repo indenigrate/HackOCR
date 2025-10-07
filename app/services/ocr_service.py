@@ -62,6 +62,17 @@ class OCRService:
         )
         matches = pattern.findall(text)
         
+        # Special handling for email addresses
+        email_pattern = re.compile(r'([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})')
+        email_matches = email_pattern.findall(text)
+        if email_matches:
+            # Take the first matching email address
+            email_parts = email_matches[0]
+            email = f"{email_parts[0].replace(' ', '')}@{email_parts[1].replace(' ', '')}"
+            # Common OCR fixes for emails
+            email = email.replace('aail.', 'gmail.')
+            data['email_id'] = email
+        
         # A map to normalize extracted keys to our desired schema keys
         key_map = {
             'first name': 'first_name', 'midde name': 'middle_name', 'last name': 'last_name',
