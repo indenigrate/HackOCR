@@ -87,8 +87,8 @@ async def data_verification_api(file: UploadFile = File(...), form_data: str = F
         # Verify each field
         results = {}
         for field, submitted_value in submitted_data.items():
-            # Get the extracted value for this field, default to empty string if not found
-            extracted_value = extracted_data.get(field, "")
+            # Get the extracted value for this field, ensure it's a string
+            extracted_value = str(extracted_data.get(field, "") or "")
             
             # Calculate similarity ratio
             similarity = ratio(str(submitted_value).lower(), str(extracted_value).lower())
@@ -108,24 +108,3 @@ async def data_verification_api(file: UploadFile = File(...), form_data: str = F
     finally:
         # Clean up the temporary file
         os.unlink(temp_file_path)
-        
-        submitted_data = json.loads(form_data)
-        
-        results = []
-        for field, submitted_value in submitted_data.items():
-            extracted_value = extracted_data.get(field)
-            
-            status = "missing_in_document"
-            confidence = 0.0
-            
-            if extracted_value is not None:
-                similarity = ratio(str(submitted_value).lower().strip(), str(extracted_value).lower().strip())
-                if similarity >= 0.95:
-                    status = "match"
-                else:
-                    status = "mismatch"
-                confidence = similarity
-
-            results.append(VerificationFieldResult(field=field, status=status, confidence=confidence))
-        
-        return VerificationResponse(results=results)

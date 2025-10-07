@@ -22,6 +22,16 @@ class OCRService:
         )
         print("✅ PaddleOCR model loaded successfully.")
 
+    def extract_text_from_image(self, image_path: str) -> str:
+        """Extract text from the given image file."""
+        result = self.model.predict(image_path)
+        if not result or not result[0]:
+            return ""
+        
+        result_dict = result[0]
+        texts = result_dict.get('rec_texts', [])
+        return "\n".join(texts)
+
     def extract_text_and_image(self, image_path: str) -> tuple[str, str]:
         """
         Performs OCR, extracts text, and returns both the text and annotated image.

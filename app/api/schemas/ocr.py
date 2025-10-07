@@ -16,7 +16,7 @@ class ExtractionResponse(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     pin_code: Optional[str] = None
-    
+
     phone_number: Optional[str] = None
     email_id: Optional[str] = None
     raw_text: str = Field(..., description="The full, raw text extracted from the document.")
@@ -24,7 +24,7 @@ class ExtractionResponse(BaseModel):
 class VerificationFieldResult(BaseModel):
     """Holds the verification result for a single field."""
     submitted: str
-    extracted: str
+    extracted: str = ''  # Default to empty string if None
     match: bool
     similarity: float
 

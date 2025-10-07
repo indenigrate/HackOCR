@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackOCR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type="file"]::file-selector-button { @apply bg-gray-600 text-white border-0 rounded-md px-4 py-2 cursor-pointer hover:bg-gray-700; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        .loader {
+            width: 1rem; height: 1rem; border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-gray-300">
+
+    <div class="container mx-auto px-4 py-12 flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl p-8 space-y-6">
+            
+            <h1 class="text-4xl font-bold text-center text-white">HackOCR</h1>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="space-y-6">
+                    <div id="image-preview-container" class="w-full h-80 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                        <div id="upload-placeholder" class="text-center">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="w-24 h-24 text-gray-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                           <p class="text-sm text-gray-400 mt-2">Upload a document to see the preview</p>
+                        </div>
+                        <img id="image-preview" src="" alt="Document Preview" class="hidden w-full h-full object-contain"/>
+                    </div>
+                     <input type="file" id="file-input" class="hidden"/>
+                     <button id="browse-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Browse...</button>
+                     <p id="file-name" class="text-sm text-gray-400 text-center">No file selected.</p>
+                    <div class="flex items-center justify-center space-x-4 pt-2">
+                        <button id="extract-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg w-full flex items-center justify-center gap-2" disabled>
+                            <span id="extract-btn-text">Extract Data</span>
+                            <div id="extract-loader" class="loader hidden"></div>
+                        </button>
+                        <button id="verify-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg w-full flex items-center justify-center gap-2" disabled>
+                            <span id="verify-btn-text">Verify Data</span>
+                            <div id="verify-loader" class="loader hidden"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <form id="ocr-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-400 mb-1">First Name</label>
+                            <div class="relative"><input type="text" name="first_name" id="first_name" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="first_name-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                         <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-400 mb-1">Last Name</label>
+                            <div class="relative"><input type="text" name="last_name" id="last_name" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="last_name-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="middle_name" class="block text-sm font-medium text-gray-400 mb-1">Middle Name</label>
+                        <div class="relative"><input type="text" name="middle_name" id="middle_name" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="middle_name-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="gender" class="block text-sm font-medium text-gray-400 mb-1">Gender</label>
+                            <div class="relative"><select name="gender" id="gender" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select><span id="gender-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                        <div>
+                            <label for="date_of_birth" class="block text-sm font-medium text-gray-400 mb-1">Date of Birth</label>
+                            <div class="relative"><input type="date" name="date_of_birth" id="date_of_birth" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="date_of_birth-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="address_line_1" class="block text-sm font-medium text-gray-400 mb-1">Address Line 1</label>
+                        <div class="relative"><input type="text" name="address_line_1" id="address_line_1" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="address_line_1-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                    </div>
+                    <div>
+                        <label for="address_line_2" class="block text-sm font-medium text-gray-400 mb-1">Address Line 2</label>
+                        <div class="relative"><input type="text" name="address_line_2" id="address_line_2" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="address_line_2-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="city" class="block text-sm font-medium text-gray-400 mb-1">City</label>
+                            <div class="relative"><input type="text" name="city" id="city" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="city-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                        <div>
+                            <label for="state" class="block text-sm font-medium text-gray-400 mb-1">State</label>
+                            <div class="relative"><input type="text" name="state" id="state" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="state-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                        <div>
+                            <label for="pin_code" class="block text-sm font-medium text-gray-400 mb-1">Pin Code</label>
+                            <div class="relative"><input type="text" name="pin_code" id="pin_code" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="pin_code-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="phone_number" class="block text-sm font-medium text-gray-400 mb-1">Phone Number</label>
+                        <div class="relative"><input type="tel" name="phone_number" id="phone_number" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="phone_number-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                    </div>
+                    <div>
+                        <label for="email_id" class="block text-sm font-medium text-gray-400 mb-1">Email Id</label>
+                        <div class="relative"><input type="email" name="email_id" id="email_id" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 pr-8"><span id="email_id-indicator" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden text-xl"></span></div>
+                    </div>
+                    <div class="flex items-center justify-end space-x-4 pt-6">
+                        <button type="reset" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Reset</button>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element Selection ---
+            const fileInput = document.getElementById('file-input');
+            const browseBtn = document.getElementById('browse-btn');
+            const fileNameDisplay = document.getElementById('file-name');
+            const imagePreview = document.getElementById('image-preview');
+            const uploadPlaceholder = document.getElementById('upload-placeholder');
+            const form = document.getElementById('ocr-form');
+            const extractBtn = document.getElementById('extract-btn');
+            const verifyBtn = document.getElementById('verify-btn');
+            const extractBtnText = document.getElementById('extract-btn-text');
+            const verifyBtnText = document.getElementById('verify-btn-text');
+            const extractLoader = document.getElementById('extract-loader');
+            const verifyLoader = document.getElementById('verify-loader');
+            
+            // --- State and Config ---
+            let currentFile = null;
+            const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+            // --- Event Listeners ---
+            browseBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    currentFile = file;
+                    fileNameDisplay.textContent = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        imagePreview.src = e.target.result;
+                        imagePreview.classList.remove('hidden');
+                        uploadPlaceholder.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                    extractBtn.disabled = false;
+                    verifyBtn.disabled = false;
+                }
+            });
+
+            extractBtn.addEventListener('click', handleExtract);
+            verifyBtn.addEventListener('click', handleVerify);
+
+            form.addEventListener('reset', handleReset);
+            form.addEventListener('submit', handleSubmit);
+
+            // --- Helper Functions ---
+            const sanitizeFormData = (data) => {
+                const sanitized = {};
+                for (const key in data) { sanitized[key] = data[key] || ''; }
+                return sanitized;
+            };
+            
+            const setFormValues = (data) => {
+                const sanitized = sanitizeFormData(data);
+                for (const key in sanitized) {
+                    const element = form.elements[key];
+                    if (element) { element.value = sanitized[key]; }
+                }
+            };
+            
+            const clearVerificationIndicators = () => {
+                document.querySelectorAll('[id$="-indicator"]').forEach(el => {
+                    el.classList.add('hidden');
+                    el.innerHTML = '';
+                });
+            };
+
+            // --- NEW: Function to display verification results ---
+            const displayVerificationResults = (results) => {
+                clearVerificationIndicators(); // Clear previous results first
+                for (const field in results) {
+                    const indicator = document.getElementById(`${field}-indicator`);
+                    if (indicator) {
+                        const result = results[field];
+                        indicator.classList.remove('hidden');
+                        if (result.match) {
+                            indicator.innerHTML = '&#x2713;'; // Checkmark
+                            indicator.classList.add('text-green-500');
+                            indicator.classList.remove('text-red-500');
+                        } else {
+                            indicator.innerHTML = '&#x2717;'; // Cross mark
+                            indicator.classList.add('text-red-500');
+                            indicator.classList.remove('text-green-500');
+                        }
+                    }
+                }
+            };
+
+            // --- API Handlers ---
+            async function handleExtract() {
+                if (!currentFile) { alert('Please select a file first.'); return; }
+                extractBtn.disabled = true;
+                extractBtnText.textContent = 'Processing...';
+                extractLoader.classList.remove('hidden');
+                clearVerificationIndicators(); // Clear indicators on new extraction
+
+                const formData = new FormData();
+                formData.append('file', currentFile);
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/extract-llm`, { method: 'POST', body: formData });
+                    if (!response.ok) { throw new Error(`Error: ${response.statusText}`); }
+                    const result = await response.json();
+                    setFormValues(result);
+                    if (result.annotated_image) {
+                        imagePreview.src = `data:image/png;base64,${result.annotated_image}`;
+                        imagePreview.classList.remove('hidden');
+                        uploadPlaceholder.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Extraction failed:', error);
+                    alert('Failed to extract data from the document.');
+                } finally {
+                    extractBtn.disabled = false;
+                    extractBtnText.textContent = 'Extract Data';
+                    extractLoader.classList.add('hidden');
+                }
+            }
+
+            async function handleVerify() {
+                if (!currentFile) { alert('Please select a file first.'); return; }
+                verifyBtn.disabled = true;
+                verifyBtnText.textContent = 'Verifying...';
+                verifyLoader.classList.remove('hidden');
+
+                const currentFormData = new FormData(form);
+                const formDataJson = JSON.stringify(Object.fromEntries(currentFormData.entries()));
+                const requestFormData = new FormData();
+                requestFormData.append('file', currentFile);
+                requestFormData.append('form_data', formDataJson);
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/verify`, { method: 'POST', body: requestFormData });
+                    if (!response.ok) { throw new Error(`Error: ${response.statusText}`); }
+                    const result = await response.json();
+                    
+                    // --- UPDATED: Call the new display function ---
+                    displayVerificationResults(result.verification_results);
+
+                } catch (error) {
+                    console.error('Verification failed:', error);
+                    alert('Failed to verify data.');
+                } finally {
+                    verifyBtn.disabled = false;
+                    verifyBtnText.textContent = 'Verify Data';
+                    verifyLoader.classList.add('hidden');
+                }
+            }
+
+            // --- Form Handlers ---
+            function handleReset() {
+                currentFile = null;
+                fileNameDisplay.textContent = 'No file selected.';
+                imagePreview.src = '';
+                imagePreview.classList.add('hidden');
+                uploadPlaceholder.classList.remove('hidden');
+                fileInput.value = '';
+                extractBtn.disabled = true;
+                verifyBtn.disabled = true;
+                clearVerificationIndicators(); // Clear indicators on reset
+            }
+
+            function handleSubmit(e) {
+                e.preventDefault();
+                const currentFormData = new FormData(form);
+                const formDataJson = Object.fromEntries(currentFormData.entries());
+                console.log('Form submitted:', formDataJson);
+                alert('Form submitted! See the data in the console.');
+            }
+        });
+    </script>
+</body>
+</html>
