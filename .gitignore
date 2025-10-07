@@ -12,3 +12,4 @@ __pycache__/
 .idea/
 .vscode/
 minimal_test.py
+tests/

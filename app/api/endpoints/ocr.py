@@ -60,26 +60,23 @@ async def ocr_extraction_llm_api(file: UploadFile = File(...)):
 @router.post("/verify", response_model=VerificationResponse)
 async def data_verification_api(file: UploadFile = File(...), form_data: str = Form(...)):
     """
-    API 2: Accepts an image and form data, then verifies them against each other.
-    [cite: 45, 46]
+    API 2: Verifies submitted data against the document using the intelligent LLM parser.
     """
-    # Save the uploaded file to a temporary path
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp:
         temp.write(await file.read())
         temp_file_path = temp.name
 
     try:
-        # Perform OCR and parsing on the document
         raw_text = ocr_service.extract_text_from_image(temp_file_path)
         if not raw_text:
-            raise HTTPException(status_code=422, detail="No text could be extracted to perform verification.")
+            raise HTTPException(status_code=422, detail="No text could be extracted for verification.")
         
-        extracted_data = ocr_service.parse_raw_text(raw_text)
+        # --- THIS IS THE KEY CHANGE ---
+        # Use the robust LLM parser instead of the simple rule-based one.
+        extracted_data = llm_service.parse_with_llm(raw_text)
         
-        # Parse the user-submitted form data (sent as a JSON string)
         submitted_data = json.loads(form_data)
         
-        # Compare extracted data with submitted data
         results = []
         for field, submitted_value in submitted_data.items():
             extracted_value = extracted_data.get(field)
@@ -88,9 +85,8 @@ async def data_verification_api(file: UploadFile = File(...), form_data: str = F
             confidence = 0.0
             
             if extracted_value is not None:
-                # Use Levenshtein ratio for string similarity
-                similarity = ratio(str(submitted_value).lower(), str(extracted_value).lower())
-                if similarity >= 0.95: # Consider it a match if 95% similar
+                similarity = ratio(str(submitted_value).lower().strip(), str(extracted_value).lower().strip())
+                if similarity >= 0.95:
                     status = "match"
                 else:
                     status = "mismatch"
