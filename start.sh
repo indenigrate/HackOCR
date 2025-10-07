@@ -7,7 +7,7 @@ ollama serve &
 sleep 5
 
 # Pull and start the phi model
-ollama pull phi &
+ollama pull phi3 &
 
 # Start the FastAPI application
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4

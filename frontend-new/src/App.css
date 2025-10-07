@@ -1,13 +1,42 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  .form-input {
+    @apply block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm 
+           focus:ring-blue-500 focus:border-blue-500
+           placeholder:text-gray-400;
+  }
+
+  .image-preview {
+    @apply relative bg-gray-50 rounded-lg overflow-hidden min-h-[400px]
+           flex items-center justify-center;
+  }
+
+  .image-preview img {
+    @apply w-full h-full object-contain;
+  }
+
+  .image-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent;
+  }
+
+  .placeholder-icon {
+    @apply w-16 h-16 text-gray-400;
+  }
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
   will-change: filter;
   transition: filter 300ms;
 }

@@ -27,6 +27,7 @@ export interface OCRResponse {
   phone_number: string | null
   email_id: string | null
   raw_text: string
+  annotated_image?: string
 }
 
 export interface VerificationResult {

@@ -6,6 +6,8 @@ from Levenshtein import ratio
 import cv2
 import os
 import tempfile
+import numpy as np
+import base64
 
 class OCRService:
     """A service class to handle all OCR-related logic."""
@@ -20,22 +22,36 @@ class OCRService:
         )
         print("✅ PaddleOCR model loaded successfully.")
 
-    def extract_text_from_image(self, image_path: str) -> str:
+    def extract_text_and_image(self, image_path: str) -> tuple[str, str]:
         """
-        Performs OCR and extracts text based on the new, correct result structure.
+        Performs OCR, extracts text, and returns both the text and annotated image.
+        Returns a tuple of (extracted_text, base64_encoded_annotated_image)
         """
+        # Read the image
+        image = cv2.imread(image_path)
         result = self.model.predict(image_path)
         
-        # --- THIS IS THE KEY CHANGE ---
-        # The result is a list containing one dictionary for the image.
-        # We access that dictionary and get the text from the 'rec_texts' key.
         if not result or not result[0]:
-            return ""
+            return "", ""
         
         result_dict = result[0]
-        texts = result_dict.get('rec_texts', []) # Safely get the list of texts
+        texts = result_dict.get('rec_texts', [])
         
-        return "\n".join(texts)
+        # Create a temporary file for the annotated image
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp:
+            temp_path = temp.name
+        
+        # Use PaddleOCR's native visualization
+        result[0].save_to_img(temp_path)
+        
+        # Read the generated image and convert to base64
+        with open(temp_path, 'rb') as img_file:
+            base64_image = base64.b64encode(img_file.read()).decode('utf-8')
+            
+        # Clean up temporary file
+        os.unlink(temp_path)
+        
+        return "\n".join(texts), base64_image
 
     def parse_raw_text(self, text: str) -> dict:
         """Intelligently parses raw text to extract structured key-value pairs."""

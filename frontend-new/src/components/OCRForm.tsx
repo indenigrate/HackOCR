@@ -19,6 +19,7 @@ interface FormData {
 
 interface OCRResponse extends FormData {
   raw_text: string;
+  annotated_image?: string;
 }
 
 const initialFormData: FormData = {
@@ -40,6 +41,8 @@ function OCRForm() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -52,6 +55,7 @@ function OCRForm() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setAnnotatedImage(null); // Clear previous image when new file is selected
     }
   };
 
@@ -77,6 +81,12 @@ function OCRForm() {
 
       const data: OCRResponse = await response.json();
       setFormData(data);
+      if (data.annotated_image) {
+        setAnnotatedImage(data.annotated_image);
+      }
+      if (data.annotated_image) {
+        setAnnotatedImage(data.annotated_image);
+      }
     } catch (error) {
       console.error('Error during OCR:', error);
       alert('Error processing document. Please try again.');
@@ -88,6 +98,8 @@ function OCRForm() {
   const handleReset = () => {
     setFormData(initialFormData);
     setFile(null);
+    setAnnotatedImage(null);
+    setAnnotatedImage(null);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -97,7 +109,8 @@ function OCRForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-6">
+      <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Document OCR</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -281,25 +294,51 @@ function OCRForm() {
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-end gap-4 pt-4">
-            <motion.button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              whileTap={{ scale: 0.95 }}
-            >
-              Reset
-            </motion.button>
-            <motion.button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              whileTap={{ scale: 0.95 }}
-            >
-              Submit
-            </motion.button>
+              {/* Form Actions */}
+              <div className="flex justify-end gap-4 pt-4">
+                <motion.button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Reset
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Submit
+                </motion.button>
+              </div>
+            </form>
           </div>
-        </form>
+
+          {/* Image Preview Section */}
+          <div className="lg:border-l lg:pl-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Preview</h2>
+            <div className="image-preview">
+              {annotatedImage ? (
+                <div className="relative">
+                  <img
+                    src={`data:image/png;base64,${annotatedImage}`}
+                    alt="Annotated document"
+                    className="w-full h-auto rounded-lg shadow-inner"
+                  />
+                  <div className="image-overlay" />
+                </div>
+              ) : (
+                <div className="text-center">
+                  <svg className="placeholder-icon mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-gray-400">Upload a document to see the preview</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
