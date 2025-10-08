@@ -8,9 +8,9 @@ services:
     restart: always
     environment:
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_MODEL=phi
+      - OLLAMA_MODEL=phi3
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Map host port 80 to container port 8000
     volumes:
       - ollama_models:/root/.ollama
     deploy:
@@ -20,16 +20,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
-  frontend:
-    build:
-      context: ./frontend-new
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
 
 volumes:
   ollama_models:

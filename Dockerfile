@@ -35,7 +35,7 @@ RUN mkdir -p /root/.ollama
 
 # Copy the application code
 WORKDIR /app
-COPY . .
+COPY ./app .
 
 # Script to start both Ollama and the FastAPI application
 COPY start.sh /start.sh
