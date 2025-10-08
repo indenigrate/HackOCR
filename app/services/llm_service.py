@@ -6,7 +6,8 @@ import json
 class LLMService:
     """A service to parse text using a local LLM via Ollama."""
 
-    def __init__(self, model_name: str = "phi3"):
+    def __init__(self, model_name: str = "phi3:mini-4k-instruct-q4_K_M"):
+    # def __init__(self, model_name: str = "phi3"):
         self.model_name = model_name
         # The client automatically connects to http://localhost:11434
         self.client = ollama.Client()
