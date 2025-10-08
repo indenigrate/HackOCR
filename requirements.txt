@@ -3,9 +3,6 @@ uvicorn[standard]
 python-multipart
 
 # For OCR, Model Handling, and Image Processing
-torch
-transformers
-sentencepiece
 Pillow
 opencv-python-headless
 ollama
@@ -14,9 +11,9 @@ paddlepaddle
 paddleocr
 
 # For PDF file support
-PyMuPDF
+# PyMuPDF
 pymupdf
 
 # For string comparison in verification
 python-Levenshtein==0.23.0
-python-Levenshtein
+# python-Levenshtein
