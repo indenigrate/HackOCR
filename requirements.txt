@@ -5,8 +5,8 @@ python-multipart
 # For OCR, Model Handling, and Image Processing
 Pillow
 opencv-python-headless
-ollama
-
+requests
+pydantic
 paddlepaddle
 paddleocr
 

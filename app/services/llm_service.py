@@ -1,20 +1,23 @@
 # app/services/llm_service.py
 
-import ollama
+import requests  # <-- CHANGED: Replaced 'ollama' with 'requests'
 import json
+import os
 
 class LLMService:
-    """A service to parse text using a local LLM via Ollama."""
+    """A service to parse text using a remote Modal LLM API."""
 
-    def __init__(self, model_name: str = "phi3"):
-    # def __init__(self, model_name: str = "phi3"):
+    def __init__(self, model_name: str = "phi3-mini"): # <-- CHANGED: Updated default model
         self.model_name = model_name
-        # The client automatically connects to http://localhost:11434
-        self.client = ollama.Client()
-        print(f"✅ LLM Service initialized for model '{self.model_name}'.")
+        # The Modal endpoint URL
+        self.api_url = "https://devanshsoni899-newenv--phi3-llm-server-serve.modal.run/v1/chat/completions"
+        print(f"✅ LLM Service initialized for remote Modal model '{self.model_name}' at {self.api_url}.")
 
     def _create_prompt(self, raw_text: str) -> str:
-        """Creates a detailed, structured prompt for the LLM."""
+        """
+        Creates a detailed, structured prompt for the LLM.
+        (This function is unchanged as its logic is correct)
+        """
         
         # This detailed prompt guides the LLM to produce clean JSON.
         prompt = f"""
@@ -47,30 +50,61 @@ You are an expert data extraction tool. Your task is to analyze the raw text fro
 
     def parse_with_llm(self, raw_text: str) -> dict:
         """
-        Sends the raw text to the local LLM and gets a structured JSON response.
+        Sends the raw text to the remote Modal LLM and gets a structured JSON response.
         """
         prompt = self._create_prompt(raw_text)
         
+        # <-- ENTIRELY NEW IMPLEMENTATION FOR API CALL -->
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.0,
+            "response_format": {"type": "json_object"}
+        }
+        
         try:
-            print(f"Sending prompt to LLM model: {self.model_name}...")
-            response = self.client.chat(
-                model=self.model_name,
-                messages=[{'role': 'user', 'content': prompt}],
-                options={'temperature': 0.0}, # Low temperature for deterministic output
-                format="json" # Tell the model to strictly output JSON
-            )
+            print(f"Sending prompt to remote LLM model: {self.model_name}...")
             
-            # The response content should be a JSON string.
-            json_string = response['message']['content']
+            # Make the POST request to the Modal API
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
             
-            # Parse the JSON string into a Python dictionary.
+            # Check for HTTP errors (e.g., 404, 500)
+            response.raise_for_status()
+            
+            # Parse the outer JSON response from the API
+            api_response_data = response.json()
+            
+            # Extract the inner JSON string from the 'content' field
+            # This matches the 'curl' output structure
+            json_string = api_response_data['choices'][0]['message']['content']
+            
+            # Parse the inner JSON string into a Python dictionary.
             parsed_data = json.loads(json_string)
+            
             print("✅ LLM parsing successful.")
             return parsed_data
 
-        except Exception as e:
-            print(f"❌ Error during LLM parsing: {e}")
+        except requests.exceptions.RequestException as e:
+            print(f"❌ HTTP Error during LLM API call: {e}")
             return {} # Return an empty dict on failure
+        except (KeyError, IndexError, json.JSONDecodeError) as e:
+            # Handle errors from an unexpected API response structure or bad JSON
+            print(f"❌ Error parsing LLM response: {e}")
+            print(f"Raw response text: {response.text if 'response' in locals() else 'No response'}")
+            return {}
+        except Exception as e:
+            print(f"❌ An unexpected error occurred: {e}")
+            return {} # Return an empty dict on failure
+        # <-- END OF NEW IMPLEMENTATION -->
 
 # Create a single instance of the service
 llm_service = LLMService()

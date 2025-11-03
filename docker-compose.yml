@@ -1,42 +1,7 @@
 services:
-  # This service now overrides the entrypoint to run a shell command.
-  init-ollama:
-    image: ollama/ollama
-    volumes:
-      - ollama:/root/.ollama
-    # 1. Override the default entrypoint to be the shell itself.
-    entrypoint: sh
-    # 2. Pass the command string as an argument to the shell.
-    command: -c "ollama serve & sleep 5 && ollama pull phi3"
-
-  # Your main Ollama service, which depends on the init-ollama service.
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama:/root/.ollama
-    depends_on:
-      init-ollama:
-        condition: service_completed_successfully
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-
   backend:
     build: .
     ports:
       - "8000:8000"
     volumes:
       - ./app:/code/app
-    depends_on:
-      - ollama
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-
-volumes:
-  ollama:
